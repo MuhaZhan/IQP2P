@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          String
+  points        Int      @default(0)
+  title         String   @default("NOVICE")
+  textColor     String   @default("#9ca3af")
+  region        String?
+  school        String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  groupId       String?
+  group         Group?   @relation("GroupMembers", fields: [groupId], references: [id])
+  ledGroups     Group[]  @relation("GroupTutor")
+  messages      Message[]
+  hotPotatoesSent     HotPotato[] @relation("PotatoSender")
+  hotPotatoesReceived HotPotato[] @relation("PotatoReceiver")
+  duelParticipations  DuelParticipant[]
+  miniGameEntries     MiniGameEntry[]
+  gameScores          GameScore[]
+  onboardingProgress  OnboardingProgress?
+  detectiveProgress   DetectiveProgress?
+}
+
+model Group {
+  id            String   @id @default(cuid())
+  number        Int      @unique
+  name          String?
+  subject       String?
+  telegramLink  String?
+  tutorId       String?
+  tutor         User?    @relation("GroupTutor", fields: [tutorId], references: [id])
+  members       User[]   @relation("GroupMembers")
+  createdAt     DateTime @default(now())
+  messages      Message[]
+  duels         Duel[]   @relation("GroupDuels")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model HotPotato {
+  id          String   @id @default(cuid())
+  task        String
+  deadline    DateTime
+  status      String   @default("ACTIVE")
+  pointsRisk  Int      @default(40)
+  createdAt   DateTime @default(now())
+  solvedAt    DateTime?
+  senderId    String
+  sender      User     @relation("PotatoSender", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("PotatoReceiver", fields: [receiverId], references: [id])
+}
+
+model Duel {
+  id           String   @id @default(cuid())
+  type         String
+  subject      String
+  status       String   @default("WAITING")
+  timeLimitSec Int      @default(120)
+  questions    String
+  createdAt    DateTime @default(now())
+  finishedAt   DateTime?
+  groupId      String?
+  group        Group?   @relation("GroupDuels", fields: [groupId], references: [id])
+  participants DuelParticipant[]
+}
+
+model DuelParticipant {
+  id        String  @id @default(cuid())
+  duelId    String
+  duel      Duel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score     Int     @default(0)
+  answers   String  @default("[]")
+  finished  Boolean @default(false)
+  @@unique([duelId, userId])
+}
+
+model MiniGame {
+  id        String   @id @default(cuid())
+  type      String
+  prompt    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  entries   MiniGameEntry[]
+}
+
+model MiniGameEntry {
+  id        String   @id @default(cuid())
+  gameId    String
+  game      MiniGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  points    Int      @default(5)
+  createdAt DateTime @default(now())
+}
+
+model GameScore {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameType     String
+  score        Int
+  pointsEarned Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model Question {
+  id         String @id @default(cuid())
+  subject    String
+  text       String
+  options    String
+  correct    Int
+  difficulty String @default("medium")
+}
+
+model OnboardingProgress {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completed   Boolean  @default(false)
+  currentStep Int      @default(0)
+  step1Done   Boolean  @default(false)
+  step2Done   Boolean  @default(false)
+  step3Done   Boolean  @default(false)
+  step4Done   Boolean  @default(false)
+  rewardClaimed Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DetectiveProgress {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completed   Boolean  @default(false)
+  currentScene Int     @default(0)
+  pointsEarned Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
